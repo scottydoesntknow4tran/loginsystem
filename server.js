@@ -6,12 +6,29 @@ const express = require('express')
 const app = express()
 const bcrypt = require('bcrypt')
 const passport = require('passport')
+const mongoose = require('mongoose')
 const flash = require('express-flash')
 const session = require('express-session')
 const methodOverride = require('method-override')
 
 
+const Authors = require('./models/authors')
+const AuthRoute = require('./controllers/authcontroller')
+
+mongoose.set('useNewUrlParser', true)
+mongoose.set('useFindAndModify', false)
+mongoose.set('useCreateIndex', true)
+mongoose.set('useUnifiedTopology', true)
+
+mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true,useUnifiedTopology:true})
+    
+var db = mongoose.connection
+db.on('error', error => console.error(error))
+db.once('open', () => console.log('Connected to Mongoose'))
+
+
 var users = []
+
 
 const intializePassport = require('./passport-config')
 const { authenticate } = require('passport')
@@ -51,20 +68,20 @@ app.get('/register',checkNotAuthenticated, (req, res)=>{
     res.render('register.ejs')
 })
 
-app.post('/register', checkNotAuthenticated, async (req, res)=>{
-    try{
-        const hashedPassword = await bcrypt.hash(req.body.password, 10)
-        users.push({
-            id: Date.now().toString(),
-            name: req.body.name,
-            email: req.body.email,
-            password: hashedPassword
-        })
-        res.redirect('/login')
-    } catch{
-        res.redirect('/register')
-    }
-    console.log(users)
+app.post('/register', checkNotAuthenticated, AuthRoute.register, async (req, res)=>{
+    // try{
+    //     //const hashedPassword = await bcrypt.hash(req.body.password, 10) 
+    //     //AuthRoute.register
+    //     // users.push({
+    //     //     id: Date.now().toString(),
+    //     //     name: req.body.name,
+    //     //     email: req.body.email,
+    //     //     password: hashedPassword
+    //     // })
+    //     //res.redirect('/login')
+    // } catch{
+    //     res.redirect('/register')
+    // }
 })
 
 app.delete('/logout', (req,res) =>{
@@ -86,4 +103,4 @@ function checkNotAuthenticated(req, res, next){
     next()
 }
 
-app.listen(5000)
+app.listen(process.env.PORT || 5000)
