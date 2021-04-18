@@ -1,23 +1,47 @@
 const Authors = require('../models/authors')
 const bcrypt = require('bcrypt')
+const { response } = require('express')
+const passport = require('passport')
 
-const register = (req, res)=>{
-    const hashedPassword = bcrypt.hash(req.body.password, 10)
+const register = async (req, res)=>{
+    const hashedPassword = await bcrypt.hash(req.body.password, 10)
 
     const authors = new Authors({
         name: req.body.name,
         email:req.body.email,
-        hashedpassword: hashedPassword
+        password: hashedPassword
     })
     
     authors.save()
-    .then(((response) =>{
-    res.redirect('/login')
-    console.log("successful")
+    .then((response) =>{
+        res.redirect('/login')
+        console.log("successfully registered")
     })
-    // .catch((err) =>{
-    //     console.log(error)})
-    )
+    .catch((err) =>{
+         console.log(error)
+    })
 }
 
-module.exports = {register}
+const login = async (req, res) => {
+    var email = req.body.email
+    var password = req.body.password
+
+    const user = await Authors.findOne({email : email})
+        if(user){
+            var fact = await bcrypt.compare(password, user.password)
+            if(fact){
+                res.redirect('/')
+                console.log("successfully logged in")
+            }
+            else{
+                console.log("unsuccesful login")
+            }
+        }else{
+            console.log("unsuccesful login")
+        }
+
+}
+
+module.exports = {
+    register,
+    login}

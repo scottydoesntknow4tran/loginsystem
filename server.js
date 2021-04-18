@@ -33,8 +33,8 @@ var users = []
 const intializePassport = require('./passport-config')
 const { authenticate } = require('passport')
 intializePassport(passport, 
-    email => users.find(user => user.email === email),
-    id => users.find(user => user.id == id)
+    email => Authors.findOne({email : email}), //user => user.email === email
+    id => Authors.findById(id)//user => user.id == id
 )
 
 app.set('view-engine', 'ejs')
@@ -50,19 +50,41 @@ app.use(passport.session())
 app.use(methodOverride('_method'))
 
 
-app.get('/', checkAuthenticated, (req, res)=>{
-    res.render('index.ejs', {name: req.user.name})
+app.get('/', (req, res)=>{
+    res.render('index.ejs', {name: "bob"})
 })
 
 app.get('/login', checkNotAuthenticated, (req, res)=>{
     res.render('login.ejs')
 })
 
-app.post('/login', checkNotAuthenticated, passport.authenticate('local',{
-    successRedirect: '/',
-    failureRedirect: '/login',
-    failureFlash: true
-}))
+// /
+app.post('/login', checkNotAuthenticated, AuthRoute.login
+//passport.authenticate('local',{ successRedirect: '/', failureRedirect: '/login', failureFlash: true})
+)
+
+app.get('/get-all',(req,res)=>{
+    Authors.find()
+    .then((result)=>{
+        res.send(result);
+    })
+    .catch((err)=>{
+        console.log(err)
+    })
+})
+
+app.get('/get-single',(req, res)=>{
+    const user = Authors.findOne({email:'w'})
+    .then((user)=>{
+        res.send(user);
+        console.log(user.email)
+        console.log(user.password)
+    })
+    .catch((err)=>{
+        console.log(err)
+    })
+
+})
 
 app.get('/register',checkNotAuthenticated, (req, res)=>{
     res.render('register.ejs')

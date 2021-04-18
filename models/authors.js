@@ -10,7 +10,7 @@ const authorSchema = new Schema({
         type: String,
         required: true
     },
-    hashedpassword:{ 
+    password:{ 
         type: String,
         required: true
     }
