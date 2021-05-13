@@ -3,23 +3,27 @@ if(process.env.node.NODE_ENV !== 'production'){
 }
 
 const express = require('express')
-const app = express()
+var app = express()
 const bcrypt = require('bcrypt')
 const passport = require('passport')
 const mongoose = require('mongoose')
+const localStrategy = require('passport-local').Strategy
 const flash = require('express-flash')
 const session = require('express-session')
 const methodOverride = require('method-override')
+const { json } = require('express')
 
 
-const Authors = require('./models/authors')
-const AuthRoute = require('./controllers/authcontroller')
+//const Authors = require('./models/authors')
+//const AuthRoute = require('./controllers/authcontroller')
 
-mongoose.set('useNewUrlParser', true)
-mongoose.set('useFindAndModify', false)
-mongoose.set('useCreateIndex', true)
-mongoose.set('useUnifiedTopology', true)
+// mongoose.set('useNewUrlParser', true)
+// mongoose.set('useFindAndModify', false)
+// mongoose.set('useCreateIndex', true)
+// mongoose.set('useUnifiedTopology', true)
 
+
+//database
 mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true,useUnifiedTopology:true})
     
 var db = mongoose.connection
@@ -27,31 +31,45 @@ db.on('error', error => console.error(error))
 db.once('open', () => console.log('Connected to Mongoose'))
 
 
-var users = []
+const UserSchema = new mongoose.Schema({
+    name:{ 
+        type: String,
+        required: true
+    },
+    username:{ 
+        type: String,
+        required: true
+    },
+    password:{ 
+        type: String,
+        required: true
+    }
+}, {timestamps: true })
 
+const User = mongoose.model('User', UserSchema)
 
-const intializePassport = require('./passport-config')
-const { authenticate } = require('passport')
-intializePassport(passport, 
-    email => Authors.findOne({email : email}), //user => user.email === email
-    id => Authors.findById(id)//user => user.id == id
-)
+//const intializePassport = require('./passport-config')
+// const { authenticate } = require('passport')
+// intializePassport(passport, 
+//     email => Authors.findOne({email : email}), //user => user.email === email
+//     id => Authors.findById(id)//user => user.id == id
+// )
 
+//middleware
 app.set('view-engine', 'ejs')
 app.use(express.urlencoded({extended: false}))
+app.use(express.static(__dirname + '/public'))
 app.use(flash())
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: true
 }))
-app.use(passport.initialize())
-app.use(passport.session())
-app.use(methodOverride('_method'))
+app.use(express.json())
 
-
-app.get('/', (req, res)=>{
-    res.render('index.ejs', {name: "bob"})
+//routes
+app.get('/', checkAuthenticated, (req, res)=>{
+    res.render('index.ejs', {name: "chonktimus prime"})
 })
 
 app.get('/login', checkNotAuthenticated, (req, res)=>{
@@ -59,56 +77,107 @@ app.get('/login', checkNotAuthenticated, (req, res)=>{
 })
 
 // /
-app.post('/login', checkNotAuthenticated, AuthRoute.login
-//passport.authenticate('local',{ successRedirect: '/', failureRedirect: '/login', failureFlash: true})
-)
+app.post('/login', passport.authenticate('local',{ 
+    successRedirect: '/', 
+    failureRedirect: '/login?error=true'}))
 
-app.get('/get-all',(req,res)=>{
-    Authors.find()
-    .then((result)=>{
-        res.send(result);
-    })
-    .catch((err)=>{
-        console.log(err)
-    })
-})
+// app.get('/get-all',(req,res)=>{
+//     Authors.find()
+//     .then((result)=>{
+//         res.send(result);
+//     })
+//     .catch((err)=>{
+//         console.log(err)
+//     })
+// })
 
-app.get('/get-single',(req, res)=>{
-    const user = Authors.findOne({email:'w'})
-    .then((user)=>{
-        res.send(user);
-        console.log(user.email)
-        console.log(user.password)
-    })
-    .catch((err)=>{
-        console.log(err)
-    })
+// app.get('/get-single',(req, res)=>{
+//     const user = Authors.findOne({email:'w'})
+//     .then((user)=>{
+//         res.send(user);
+//         console.log(user.email)
+//         console.log(user.password)
+//     })
+//     .catch((err)=>{
+//         console.log(err)
+//     })
 
-})
+// })
 
 app.get('/register',checkNotAuthenticated, (req, res)=>{
     res.render('register.ejs')
 })
 
-app.post('/register', checkNotAuthenticated, AuthRoute.register, async (req, res)=>{
-    // try{
-    //     //const hashedPassword = await bcrypt.hash(req.body.password, 10) 
-    //     //AuthRoute.register
-    //     // users.push({
-    //     //     id: Date.now().toString(),
-    //     //     name: req.body.name,
-    //     //     email: req.body.email,
-    //     //     password: hashedPassword
-    //     // })
-    //     //res.redirect('/login')
-    // } catch{
-    //     res.redirect('/register')
-    // }
+app.post('/register', checkNotAuthenticated, async (req, res)=>{
+        const exists = await User.exists({username: req.body.username})
+        if(exists){
+            res.redirect('/login')
+            return
+        }
+        const hashedPassword = await bcrypt.hash(req.body.password, 10)
+        console.log(req.body.username)
+        const user = new User({
+            name: req.body.name,
+            username: req.body.username,
+            password: hashedPassword
+        })
+    
+        user.save()
+        .then((response) =>{
+            res.redirect('/login')
+            console.log("successfully registered")
+        })
+        .catch((err) =>{
+            console.log(err)
+        })
+    })
+        //     res.redirect('/login')
+        // } catch{
+        //     res.redirect('/register')
+        // }
+       
+
+    app.delete('/logout', (req,res) =>{
+        req.logOut()
+        res.redirect('/login')
+    })
+
+
+//passport
+
+app.use(passport.initialize())
+app.use(passport.session())
+//app.use(methodOverride('_method'))
+
+passport.use(new localStrategy(function (username, password, done){
+    User.findOne({ username: username}, function(err,user){
+        console.log(user)
+        if(err){return done (err)}
+        if(!user){ return done(null, false, {message: "Incorrect Email"})}
+        
+        bcrypt.compare(password, user.password, function(err, res){
+            if (err) return done(err)
+
+            if(res == false){
+                return done(null, false, {message:"Incorrect password"})
+            }
+            return done(null, user)
+        })
+
+    })
+
+})) // 'password' is the default value passed in, so we dont need it
+
+passport.serializeUser(function (user, done){
+    console.log('serialized')
+    done(null,user.id)    
 })
 
-app.delete('/logout', (req,res) =>{
-    req.logOut()
-    res.redirect('/login')
+passport.deserializeUser(function (id, done){
+    console.log('deserialized')
+    User.findById(id, function (err, user){
+        done(err, user);
+    })
 })
 
 function checkAuthenticated(req, res, next){
@@ -125,4 +194,6 @@ function checkNotAuthenticated(req, res, next){
     next()
 }
 
+
+//starting server
 app.listen(process.env.PORT || 5000)
