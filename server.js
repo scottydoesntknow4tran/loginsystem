@@ -3,15 +3,15 @@ if(process.env.node.NODE_ENV !== 'production'){
 }
 
 const express = require('express')
-var app = express()
 const bcrypt = require('bcrypt')
-const passport = require('passport')
 const mongoose = require('mongoose')
-const localStrategy = require('passport-local').Strategy
 const flash = require('express-flash')
 const session = require('express-session')
+const passport = require('passport')
+const localStrategy = require('passport-local').Strategy
 const methodOverride = require('method-override')
 const { json } = require('express')
+var app = express()
 
 
 //const Authors = require('./models/authors')
@@ -23,14 +23,15 @@ const { json } = require('express')
 // mongoose.set('useUnifiedTopology', true)
 
 
-//database
+
+//connecting to database
 mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true,useUnifiedTopology:true})
     
 var db = mongoose.connection
 db.on('error', error => console.error(error))
 db.once('open', () => console.log('Connected to Mongoose'))
 
-
+//setting up docuements
 const UserSchema = new mongoose.Schema({
     name:{ 
         type: String,
@@ -57,7 +58,6 @@ const User = mongoose.model('User', UserSchema)
 
 //middleware
 app.set('view-engine', 'ejs')
-app.use(express.urlencoded({extended: false}))
 app.use(express.static(__dirname + '/public'))
 app.use(flash())
 app.use(session({
@@ -65,7 +65,64 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }))
+app.use(express.urlencoded({extended: false}))
 app.use(express.json())
+
+//passport
+app.use(passport.initialize())
+app.use(passport.session())
+
+//passport
+passport.serializeUser(function (user, done){
+    console.log('serialized')
+    done(null,user.id)    
+})
+
+passport.deserializeUser(function (id, done){
+    console.log('deserialized')
+    User.findById(id, function (err, user){
+        done(err, user);
+    })
+})
+
+passport.use(new localStrategy(function (username, password, done){
+    User.findOne({ username: username}, function(err,user){
+        //console.log(user)
+        if(err){return done (err)}
+        if(!user){ return done(null, false, {message: "Incorrect Email"})}
+        
+        bcrypt.compare(password, user.password, function(err, res){
+            if (err) return done(err)
+
+            if(res == false){
+                return done(null, false, {message:"Incorrect password"})
+            }
+            return  done(null, user)
+        })
+
+    })
+
+})) 
+
+//authentication
+
+function checkAuthenticated(req, res, next){
+    if(req.isAuthenticated()){
+        console.log("authenticated")
+        return next()
+    }
+    else {
+        console.log("not authenticated")
+        res.redirect('/login')
+    }
+}
+
+function checkNotAuthenticated(req, res, next){
+    if(req.isAuthenticated()){
+        return res.redirect('/')
+    }
+    next()
+}
 
 //routes
 app.get('/', checkAuthenticated, (req, res)=>{
@@ -143,56 +200,8 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
     })
 
 
-//passport
 
-app.use(passport.initialize())
-app.use(passport.session())
-//app.use(methodOverride('_method'))
 
-passport.use(new localStrategy(function (username, password, done){
-    User.findOne({ username: username}, function(err,user){
-        console.log(user)
-        if(err){return done (err)}
-        if(!user){ return done(null, false, {message: "Incorrect Email"})}
-        
-        bcrypt.compare(password, user.password, function(err, res){
-            if (err) return done(err)
-
-            if(res == false){
-                return done(null, false, {message:"Incorrect password"})
-            }
-            return done(null, user)
-        })
-
-    })
-
-})) // 'password' is the default value passed in, so we dont need it
-
-passport.serializeUser(function (user, done){
-    console.log('serialized')
-    done(null,user.id)    
-})
-
-passport.deserializeUser(function (id, done){
-    console.log('deserialized')
-    User.findById(id, function (err, user){
-        done(err, user);
-    })
-})
-
-function checkAuthenticated(req, res, next){
-    if(req.isAuthenticated()){
-        return next()
-    }
-    res.redirect('/login')
-}
-
-function checkNotAuthenticated(req, res, next){
-    if(req.isAuthenticated()){
-        return res.redirect('/')
-    }
-    next()
-}
 
 
 //starting server
