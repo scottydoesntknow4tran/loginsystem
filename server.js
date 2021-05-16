@@ -11,6 +11,7 @@ const passport = require('passport')
 const localStrategy = require('passport-local').Strategy
 const methodOverride = require('method-override')
 const { json } = require('express')
+const { name } = require('ejs')
 var app = express()
 
 
@@ -59,6 +60,7 @@ const User = mongoose.model('User', UserSchema)
 //middleware
 app.set('view-engine', 'ejs')
 app.use(express.static(__dirname + '/public'))
+//app.use(express.static(__dirname + '/public'))
 app.use(flash())
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -126,7 +128,7 @@ function checkNotAuthenticated(req, res, next){
 
 //routes
 app.get('/', checkAuthenticated, (req, res)=>{
-    res.render('index.ejs', {name: "chonktimus prime"})
+    res.render('index.ejs', {name: " "})
 })
 
 app.get('/login', checkNotAuthenticated, (req, res)=>{

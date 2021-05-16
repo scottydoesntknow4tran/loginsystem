@@ -1,0 +1,49 @@
+body{
+    color: black;
+    font-family: Verdana, Arial, Geneva, Arial Black;
+    background-image: url(garage1.jpg);
+}
+/* h1 {
+    color:black;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: auto;
+    
+}
+h2, h3{
+
+    font-family:Arial, Helvetica, sans-serif;
+    font-size: large;
+    border-bottom: 2px solid black;
+
+}
+p{  
+    font-style: italic;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    color: white;
+    border: 1px solid rgb(233, 10, 10);
+    padding: 10px;
+    background-image: url(background6.png);
+    background-repeat: no-repeat;
+    background-size: 101% 101%;
+    border-color: black;
+    border-width: 2px;
+    border-style: ridge;
+    margin: 20px;
+    margin-top: 50px;
+    line-height: 30px;
+    border-radius: 10px;
+    font-size:larger;
+} */
+/* .jumbotron{
+    font-style: italic;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    color: white;
+    background-color: crimson;
+    line-height: 25px;
+    padding: 10px;
+    border-color: black;
+    border-width: 2px;
+    border-style: ridge;
+}
+
