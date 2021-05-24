@@ -1,8 +1,10 @@
+//this file is not used
+
 const LocalStrategy = require('passport-local').Strategy
 const bcrypt = require('bcrypt')
 
-const Author = require('./models/authors')
-const AuthRoute = require('./controllers/authcontroller')
+const Author = require('./authors')
+const AuthRoute = require('./authcontroller')
 
 
 function intialize(passport, getUserByEmail, getUserByID){

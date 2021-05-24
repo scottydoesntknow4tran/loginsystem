@@ -15,15 +15,6 @@ const { name } = require('ejs')
 var app = express()
 
 
-//const Authors = require('./models/authors')
-//const AuthRoute = require('./controllers/authcontroller')
-
-// mongoose.set('useNewUrlParser', true)
-// mongoose.set('useFindAndModify', false)
-// mongoose.set('useCreateIndex', true)
-// mongoose.set('useUnifiedTopology', true)
-
-
 
 //connecting to database
 mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true,useUnifiedTopology:true})
@@ -50,12 +41,7 @@ const UserSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema)
 
-//const intializePassport = require('./passport-config')
-// const { authenticate } = require('passport')
-// intializePassport(passport, 
-//     email => Authors.findOne({email : email}), //user => user.email === email
-//     id => Authors.findById(id)//user => user.id == id
-// )
+
 
 //middleware
 app.set('view-engine', 'ejs')
@@ -190,10 +176,6 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
             console.log(err)
         })
     })
-        //     res.redirect('/login')
-        // } catch{
-        //     res.redirect('/register')
-        // }
        
 
     app.get('/logout', function (req,res){

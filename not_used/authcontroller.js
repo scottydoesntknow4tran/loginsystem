@@ -1,4 +1,4 @@
-const Authors = require('../models/authors')
+const Authors = require('./authors')
 const Users = require('../models/users')
 const bcrypt = require('bcrypt')
 const { response } = require('express')
