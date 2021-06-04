@@ -10,6 +10,7 @@ const session = require('express-session')
 const passport = require('passport')
 const localStrategy = require('passport-local').Strategy
 const methodOverride = require('method-override')
+const driver = require('./driver');
 const { json } = require('express')
 const { name } = require('ejs')
 var app = express()
@@ -116,6 +117,9 @@ function checkNotAuthenticated(req, res, next){
 app.get('/', checkAuthenticated, (req, res)=>{
     res.render('index.ejs', {name: " "})
 })
+
+app.post('/door',checkAuthenticated, (req, res)=>{
+    driver.pulse_relay()})
 
 app.get('/login', checkNotAuthenticated, (req, res)=>{
     res.render('login.ejs')
