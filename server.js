@@ -1,4 +1,4 @@
-if(process.env.node.NODE_ENV !== 'production'){
+if(process.env.NODE_ENV !== 'production'){
     require('dotenv').config()
 }
 
@@ -13,8 +13,8 @@ const methodOverride = require('method-override')
 const driver = require('./driver');
 const { json } = require('express')
 const { name } = require('ejs')
+const User = require('./models/users')
 var app = express()
-
 
 
 //connecting to database
@@ -24,30 +24,13 @@ var db = mongoose.connection
 db.on('error', error => console.error(error))
 db.once('open', () => console.log('Connected to Mongoose'))
 
-//setting up docuements
-const UserSchema = new mongoose.Schema({
-    name:{ 
-        type: String,
-        required: true
-    },
-    username:{ 
-        type: String,
-        required: true
-    },
-    password:{ 
-        type: String,
-        required: true
-    }
-}, {timestamps: true })
+//setting up global variable
 
-const User = mongoose.model('User', UserSchema)
-
-
+let namedb =" "
 
 //middleware
 app.set('view-engine', 'ejs')
 app.use(express.static(__dirname + '/public'))
-//app.use(express.static(__dirname + '/public'))
 app.use(flash())
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -70,13 +53,12 @@ passport.serializeUser(function (user, done){
 passport.deserializeUser(function (id, done){
     console.log('deserialized')
     User.findById(id, function (err, user){
-        done(err, user);
+        done(null, user);
     })
 })
 
 passport.use(new localStrategy(function (username, password, done){
     User.findOne({ username: username}, function(err,user){
-        //console.log(user)
         if(err){return done (err)}
         if(!user){ return done(null, false, {message: "Incorrect Email"})}
         
@@ -113,9 +95,19 @@ function checkNotAuthenticated(req, res, next){
     next()
 }
 
+async function findName(req, res){
+    const user = await User.findOne({username: req.body.username})
+                // console.log(user)
+            //console.log(user.name)
+                // console.log(user.username)
+                // console.log(user.password)
+            namedb = user.name
+            res.redirect('/')
+}
+
 //routes
 app.get('/', checkAuthenticated, (req, res)=>{
-    res.render('index.ejs', {name: " "})
+    res.render('index.ejs', {name: namedb})
 })
 
 app.post('/door',checkAuthenticated, (req, res)=>{
@@ -125,10 +117,8 @@ app.get('/login', checkNotAuthenticated, (req, res)=>{
     res.render('login.ejs')
 })
 
-// /
-app.post('/login', passport.authenticate('local',{ 
-    successRedirect: '/', 
-    failureRedirect: '/login?error=true'}))
+app.post('/login', passport.authenticate('local',{ failureRedirect: '/login?error=true'})
+    , findName)
 
 // app.get('/get-all',(req,res)=>{
 //     Authors.find()
