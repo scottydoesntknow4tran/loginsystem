@@ -4,6 +4,7 @@ if(process.env.NODE_ENV !== 'production'){
 
 const express = require('express')
 const bcrypt = require('bcrypt')
+const Cryptr = require('cryptr')
 const mongoose = require('mongoose')
 const flash = require('express-flash')
 const session = require('express-session')
@@ -25,8 +26,9 @@ db.on('error', error => console.error(error))
 db.once('open', () => console.log('Connected to Mongoose'))
 
 //setting up global variable
+const cryptr = new Cryptr(process.env.ENCRYPTION_KEY)
 
-let namedb =" "
+let namedb = " "
 
 //middleware
 app.set('view-engine', 'ejs')
@@ -97,17 +99,13 @@ function checkNotAuthenticated(req, res, next){
 
 async function findName(req, res){
     const user = await User.findOne({username: req.body.username})
-                // console.log(user)
-            //console.log(user.name)
-                // console.log(user.username)
-                // console.log(user.password)
-            namedb = user.name
+            namedb = await cryptr.encrypt(user.name)
             res.redirect('/')
 }
 
 //routes
-app.get('/', checkAuthenticated, (req, res)=>{
-    res.render('index.ejs', {name: namedb})
+app.get('/', checkAuthenticated, async (req, res)=>{
+    res.render('index.ejs', {name: await cryptr.decrypt(namedb)})
 })
 
 app.post('/door',checkAuthenticated, (req, res)=>{
@@ -153,22 +151,23 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
             res.redirect('/login')
             return
         }
-        const hashedPassword = await bcrypt.hash(req.body.password, 10)
-        console.log(req.body.username)
-        const user = new User({
-            name: req.body.name,
-            username: req.body.username,
-            password: hashedPassword
-        })
-    
+        try{
+        await bcrypt.hash(req.body.password, 12, function(err, hash) {
+            const user = new User({
+                name: req.body.name,
+                username: req.body.username,
+                password: hash
+            })
         user.save()
-        .then((response) =>{
+        console.log("User stored")
+        })
+        await function(err, response) {
             res.redirect('/login')
             console.log("successfully registered")
-        })
-        .catch((err) =>{
+        }}
+        catch (err){
             console.log(err)
-        })
+        }
     })
        
 
@@ -183,4 +182,4 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
 
 
 //starting server
-app.listen(process.env.PORT || 5000)
+app.listen(process.env.PORT || 3000)
