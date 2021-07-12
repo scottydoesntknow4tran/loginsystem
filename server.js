@@ -3,6 +3,9 @@ if(process.env.NODE_ENV !== 'production'){
 }
 
 const express = require('express')
+const https = require('https')
+const fs = require('fs')
+const path = require('path')
 const bcrypt = require('bcrypt')
 const Cryptr = require('cryptr')
 const mongoose = require('mongoose')
@@ -17,6 +20,11 @@ const { name } = require('ejs')
 const User = require('./models/users')
 var app = express()
 
+//creating SSL server
+const sslServer = https.createServer({
+    key: fs.readFileSync(path.join(__dirname, 'cert', 'key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'cert', 'cert.pem'))
+},app)
 
 //connecting to database
 mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true,useUnifiedTopology:true})
@@ -78,6 +86,17 @@ passport.use(new localStrategy(function (username, password, done){
 })) 
 
 //authentication
+
+function checkCode(req, res, next){
+    if(process.env.REGISTRATION_KEY == req.body.code){
+        console.log("authenticated")
+        return next()
+    }
+    else {
+        console.log("not authenticated")
+        alert("Incorrect Registraion Code")
+    }
+}
 
 function checkAuthenticated(req, res, next){
     if(req.isAuthenticated()){
@@ -145,7 +164,7 @@ app.get('/register',checkNotAuthenticated, (req, res)=>{
     res.render('register.ejs')
 })
 
-app.post('/register', checkNotAuthenticated, async (req, res)=>{
+app.post('/register', checkNotAuthenticated, checkCode, async (req, res)=>{
         const exists = await User.exists({username: req.body.username})
         if(exists){
             res.redirect('/login')
@@ -159,12 +178,14 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
                 password: hash
             })
         user.save()
+        alert("User Created")
         console.log("User stored")
-        })
-        await function(err, response) {
-            res.redirect('/login')
-            console.log("successfully registered")
-        }}
+        res.redirect('/login')
+        })}
+        // await function(err, response) {
+        //     res.redirect('/login')
+        //     console.log("successfully registered")
+        // }}
         catch (err){
             console.log(err)
         }
@@ -176,10 +197,5 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
         res.redirect('/login')
     })
 
-
-
-
-
-
 //starting server
-app.listen(process.env.PORT || 3000)
+sslServer.listen(process.env.PORT, () => console.log('Secure sever started') )
