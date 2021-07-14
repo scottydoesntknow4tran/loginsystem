@@ -18,6 +18,7 @@ const driver = require('./driver');
 const { json } = require('express')
 const { name } = require('ejs')
 const User = require('./models/users')
+const alert = require('alert')
 var app = express()
 
 //creating SSL server
@@ -93,8 +94,9 @@ function checkCode(req, res, next){
         return next()
     }
     else {
-        console.log("not authenticated")
-        alert("Incorrect Registraion Code")
+        console.log("wrong authentication code")
+        alert('Incorrect Registraion Code')
+        //redirect("/register")
     }
 }
 
@@ -105,7 +107,6 @@ function checkAuthenticated(req, res, next){
     }
     else {
         console.log("not authenticated")
-        res.redirect('/login')
     }
 }
 
