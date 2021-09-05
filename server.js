@@ -3,7 +3,11 @@ if(process.env.NODE_ENV !== 'production'){
 }
 
 const express = require('express')
+const https = require('https')
+const fs = require('fs')
+const path = require('path')
 const bcrypt = require('bcrypt')
+const Cryptr = require('cryptr')
 const mongoose = require('mongoose')
 const flash = require('express-flash')
 const session = require('express-session')
@@ -14,8 +18,13 @@ const driver = require('./driver');
 const { json } = require('express')
 const { name } = require('ejs')
 const User = require('./models/users')
+const alert = require('alert')
 var app = express()
 
+//creating SSL server
+//const sslServer = https.createServer({
+  //  key: fs.readFileSync(path.join(__dirname, 'cert', 'key.pem')),
+    //cert: fs.readFileSync(path.join(__dirname, 'cert', 'cert.pem'))},app)
 
 //connecting to database
 mongoose.connect(process.env.DATABASE_URL, {useNewUrlParser: true,useUnifiedTopology:true})
@@ -25,8 +34,9 @@ db.on('error', error => console.error(error))
 db.once('open', () => console.log('Connected to Mongoose'))
 
 //setting up global variable
+//const cryptr = new Cryptr(process.env.ENCRYPTION_KEY)
 
-let namedb =" "
+let namedb = " "
 
 //middleware
 app.set('view-engine', 'ejs')
@@ -77,6 +87,18 @@ passport.use(new localStrategy(function (username, password, done){
 
 //authentication
 
+function checkCode(req, res, next){
+    if(process.env.REGISTRATION_KEY == req.body.code){
+        console.log("authenticated")
+        return next()
+    }
+    else {
+        console.log("wrong authentication code")
+        alert('Incorrect Registraion Code')
+        return res.redirect("/register")
+    }
+}
+
 function checkAuthenticated(req, res, next){
     if(req.isAuthenticated()){
         console.log("authenticated")
@@ -84,30 +106,26 @@ function checkAuthenticated(req, res, next){
     }
     else {
         console.log("not authenticated")
-        res.redirect('/login')
-    }
+        return res.redirect('/login')
+	}
 }
 
 function checkNotAuthenticated(req, res, next){
     if(req.isAuthenticated()){
         return res.redirect('/')
     }
-    next()
+    return next()
 }
 
 async function findName(req, res){
     const user = await User.findOne({username: req.body.username})
-                // console.log(user)
-            //console.log(user.name)
-                // console.log(user.username)
-                // console.log(user.password)
-            namedb = user.name
+            namedb = await user.name
             res.redirect('/')
 }
 
 //routes
-app.get('/', checkAuthenticated, (req, res)=>{
-    res.render('index.ejs', {name: namedb})
+app.get('/', checkAuthenticated, async (req, res)=>{
+    res.render('index.ejs', {name: await namedb })
 })
 
 app.post('/door',checkAuthenticated, (req, res)=>{
@@ -147,28 +165,31 @@ app.get('/register',checkNotAuthenticated, (req, res)=>{
     res.render('register.ejs')
 })
 
-app.post('/register', checkNotAuthenticated, async (req, res)=>{
+app.post('/register', checkNotAuthenticated, checkCode, async (req, res)=>{
         const exists = await User.exists({username: req.body.username})
         if(exists){
             res.redirect('/login')
             return
         }
-        const hashedPassword = await bcrypt.hash(req.body.password, 10)
-        console.log(req.body.username)
-        const user = new User({
-            name: req.body.name,
-            username: req.body.username,
-            password: hashedPassword
-        })
-    
+        try{
+        await bcrypt.hash(req.body.password, 12, function(err, hash) {
+            const user = new User({
+                name: req.body.name,
+                username: req.body.username,
+                password: hash
+            })
         user.save()
-        .then((response) =>{
-            res.redirect('/login')
-            console.log("successfully registered")
-        })
-        .catch((err) =>{
+        alert("User Created")
+        console.log("User stored")
+        res.redirect('/login')
+        })}
+        // await function(err, response) {
+        //     res.redirect('/login')
+        //     console.log("successfully registered")
+        // }}
+        catch (err){
             console.log(err)
-        })
+        }
     })
        
 
@@ -177,10 +198,7 @@ app.post('/register', checkNotAuthenticated, async (req, res)=>{
         res.redirect('/login')
     })
 
-
-
-
-
-
 //starting server
-app.listen(process.env.PORT || 5000)
+
+app.listen(process.env.PORT||5000)
+//sslServer.listen(process.env.PORT, () => console.log('Secure sever started') )
